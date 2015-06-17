@@ -1,0 +1,72 @@
+ENV_NAME: 'LOCAL_DEVELOPMENT'
+
+COMMON: &common
+    LOGGING: True
+    LOG_FILE_PTAH: '/logs/'
+    LOG_FILE: 'ooiservices.log'
+    SECRET_KEY: 'ccdf5de08ac74855bda3e7e309d871e5'
+    SSL_DISABLE: False
+    SQLALCHEMY_COMMIT_ON_TEARDOWN: True
+    SQLALCHEMY_RECORD_QUERIES: True
+    OOI_SLOW_DB_QUERY_TIME: 0.5
+    HOST: localhost
+    PORT: 4000
+    JSONIFY_PRETTYPRINT_REGULAR: true
+    UFRAME_URL: 'http://uframe-test.ooi.rutgers.edu:12576'
+    UFRAME_ASSETS_URL: 'http://uframe-test.ooi.rutgers.edu:12573'
+    UFRAME_URL_BASE: '/sensor/inv'
+    UFRAME_TOC: '/sensor/inv/toc'
+    UFRAME_INST_URL: 'http://uframe-test.ooi.rutgers.edu:12572'
+    UFRAME_INST_BASE: '/instrument/api'
+    UFRAME_PLAT_BASE: '/platform/api'
+    UFRAME_TIMEOUT_CONNECT: 5
+    UFRAME_TIMEOUT_READ: 30
+    REDMINE_KEY: '8304b8012f83f8d3f155b479210884615167ceae'
+    UI_API_KEY: 'd7893bdf92a54007a61c7a11c2ab5707'
+    REDMINE_URL: 'https://uframe-cm.ooi.rutgers.edu'
+    REDMINE_PROJECT_ID: 'ooi-ui-api-testing'
+    WHOOSH_BASE: 'ooiservices/whoosh_index'
+    REDIS_URL: 'redis://:password@localhost:6379'
+    DEPLOYMENT_SCENARIO: LOCAL_DEVELOPMENT
+    UFRAME_DATA_REQUEST_LIMIT: 2880
+    USE_MOCK_DATA: False
+
+    UFRAME_QPID_TIMEOUT: 1.0
+    UFRAME_QPID_BROKER: "uframe-test.ooi.rutgers.edu"
+    UFRAME_QPID_USERNAME: "guest"
+    UFRAME_QPID_PASSWORD: "guest"
+    UFRAME_QPID_BROKER_PORT: 5672
+    UFRAME_QPID_TOPIC: "alertalarm.msg"
+    UFRAME_QPID_EXCHANGE: "amq.topic"
+    UFRAME_QPID_RECONNECT: True
+    UFRAME_QPID_RECONNECT_INTERVAL: 3
+    UFRAME_QPID_RECONNECT_LIMIT: 2
+    UFRAME_QPID_VERBOSE: False
+    UFRAME_QPID_FOREVER: False
+    UFRAME_QPID_FORMAT: "%(M)s"
+
+DEVELOPMENT: &development
+    <<: *common
+    DEBUG: True
+    SQLALCHEMY_DATABASE_URI: 'postgres://user:password@hostname/database_name'
+    SSL_DISABLE: True
+    WTF_CSRF_ENABLED: False
+
+LOCAL_DEVELOPMENT: &local_dev
+    <<: *common
+    DEBUG: True
+    SQLALCHEMY_DATABASE_URI: 'postgres://postgres:postgres@localhost/ooiuidevqpid'
+    SSL_DISABLE: True
+    WTF_CSRF_ENABLED: False
+
+TESTING_CONFIG: &testing
+    <<: *common
+    TESTING: True
+    SQLALCHEMY_DATABASE_URI: 'postgres://postgres:postgres@localhost/ooiuitestqpid'
+    WTF_CSRF_ENABLED: False
+
+PRODUCTION: &production
+    <<: *common
+    SQLALCHEMY_DATABASE_URI: 'postgres://user:password@hostname/database_name'
+    SSL_DISABLE: True
+    WTF_CSRF_ENABLED: False
