@@ -12,24 +12,23 @@ COMMON: &common
     HOST: localhost
     PORT: 4000
     JSONIFY_PRETTYPRINT_REGULAR: true
-    UFRAME_URL: 'http://uframe-test.ooi.rutgers.edu:12576'
-    UFRAME_ASSETS_URL: 'http://uframe-test.ooi.rutgers.edu:12573'
+    UFRAME_URL: 'http://localhost:12576'
+    UFRAME_ASSETS_URL: 'http://localhost:12573'
     UFRAME_URL_BASE: '/sensor/inv'
     UFRAME_TOC: '/sensor/inv/toc'
-    UFRAME_INST_URL: 'http://uframe-test.ooi.rutgers.edu:12572'
+    UFRAME_INST_URL: 'http://localhost:12572'
     UFRAME_INST_BASE: '/instrument/api'
     UFRAME_PLAT_BASE: '/platform/api'
     UFRAME_TIMEOUT_CONNECT: 5
     UFRAME_TIMEOUT_READ: 30
-    REDMINE_KEY: '8304b8012f83f8d3f155b479210884615167ceae'
-    UI_API_KEY: 'd7893bdf92a54007a61c7a11c2ab5707'
+    REDMINE_KEY: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    UI_API_KEY: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     REDMINE_URL: 'https://uframe-cm.ooi.rutgers.edu'
     REDMINE_PROJECT_ID: 'ooi-ui-api-testing'
     WHOOSH_BASE: 'ooiservices/whoosh_index'
     REDIS_URL: 'redis://:password@localhost:6379'
     DEPLOYMENT_SCENARIO: LOCAL_DEVELOPMENT
     UFRAME_DATA_REQUEST_LIMIT: 2880
-    USE_MOCK_DATA: False
 
     UFRAME_QPID_TIMEOUT: 2.0
     UFRAME_QPID_BROKER: "uframe-test.ooi.rutgers.edu"

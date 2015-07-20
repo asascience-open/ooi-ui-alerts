@@ -116,6 +116,7 @@ class Configuration:
         print '\n qpid_format: ', self.qpid_format
         print '\n qpid_fetch_interval: ', self.qpid_fetch_interval
         print '\n host: ', self.host
+        print '\n port: ', self.port
         print '\n ooi_timeout: ', self.ooi_timeout
         print '\n ooi_timeout_read: ', self.ooi_timeout_read
         print '\n '
@@ -309,11 +310,19 @@ try:
         response = requests.get(test_url, timeout=(ooi_timeout, ooi_timeout_read))
         if response.status_code != 200:
             message = 'Unable to connect to ooi-ui-services, aborting. status code: %s' % str(response.status_code)
-            #print '\n message: ', message
+            print '\n message: ', message
             raise Exception(message)
+
+        response_data = json.loads(response.content)
+        if 'alert_alarm_definition' not in response_data:
+            message = 'Malformed response content from ooi-ui-services.'
+            raise Exception(message)
+        if not response_data['alert_alarm_definition'] or response_data['alert_alarm_definition'] is None:
+            message = 'Failed to retrieve any alert_alarm_definition(s) from ooi-ui-services.'
+            raise Exception(message)
+
     except Exception as err:
         message = 'Verify configuration and availability of ooi-ui-services, aborting. Error: %s' % str(err.message)
-        #print '\n message: ', message
         raise Exception(message)
 
     # Enable qpid DEBUG or WARN
