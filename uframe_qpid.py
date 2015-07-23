@@ -228,22 +228,23 @@ def persist_system_event(message, url, timeout, timeout_read):
         }
     """
     debug = False
+    success = True
 
     # Get values from message for data dictionary
     content = json.loads(str(message.content))
+    if debug: print '\n message.content: ', content
 
     # todo verify required content is available
     attributes = content['attributes']
     if 'eventId' not in attributes:
         uframe_event_id = -1                        # processing an alert
+        uframe_filter_id = 1
     else:
         uframe_event_id = attributes['eventId']     # processing an alarm
-
-    if debug: print '\n message.content: ', content
-    if 'filterId' in attributes:
-        uframe_filter_id = attributes['filterId']                  #todo Change when available
-    else:
-        uframe_filter_id = 2
+        if 'filterId' in attributes:
+            uframe_filter_id = attributes['filterId']                  #todo Change when available
+        else:
+            uframe_filter_id = 2
 
     severity = attributes['severity']
     method = attributes['method']
@@ -252,7 +253,7 @@ def persist_system_event(message, url, timeout, timeout_read):
     if severity > 0:
         event_type = 'alert'
     event_response_message = content['messageText']
-    event_time = attributes['time']             # convert attribute['event_time'] to date in ooi-ui-services
+    event_time = attributes['time']
 
     # Populate dictionary for POST
     event_data = {}
@@ -270,34 +271,35 @@ def persist_system_event(message, url, timeout, timeout_read):
         # Send request to ooi-ui-services to persist SystemEvent
         response = requests.post(url, timeout=(timeout, timeout_read),  data=new_event) # headers=headers,
         if response.status_code != 201:
-            message = 'Error: status code: %s' % str(response.status_code)
-            if debug: print '\n uframe_qpid persist exception: message: ', message
+            success = False
+            message = 'Error: (%d) ' % (response.status_code)
+            if response.content is not None:
+                tmp = json.loads(response.content)
+                if 'message' in tmp:
+                    message += str(tmp['message'])
+            print '\n Exception persisting alert_alarm: %s' % message
+            print ' event_data: ', event_data
 
         if debug: print '\n SystemEvent: ', response.content
     except Exception as err:
         # todo - investigate this problem (intermittent connection refused by ooi-ui-services)
         print '\n Failed to persist event_data: %r; %s ' % (event_data,  err.message)
-
-    return
-
-'''
-def iso_to_timestamp(iso8601):
-    pdt = parse_date(iso8601)
-    t = (pdt - dt(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
-    return t
-'''
+        success = False
+    return success
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Long running service
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 conn = None
 try:
-
+    debug = False
     print '\n Starting...'
 
     # Read configuration file for settings
     config = Configuration()
-    config.settings()
+
+    # Display configuration variables
+    #config.settings()
 
     # verify ooi-ui-services are available - if not, abort
     # todo consider security/auth access for 12577
@@ -350,17 +352,18 @@ try:
         print '\n message: ', message
         raise Exception(message)
 
-    debug = False
-    # Configure connection and session receiver
+
+    # Configure connection and session receiver. Process available messages one at a time,
+    # sending an acknowledge after each.
     conn.open()
     session = conn.session()
     receiver = session.receiver(config.qpid_address)
-
-    # Process available messages one at a time, sending an acknowledge after each.
     url = "/".join([base_url, "alert_alarm"])
     qpid_fetch_interval = config.qpid_fetch_interval
     if qpid_fetch_interval < 1:         # config?
         qpid_fetch_interval = 3         # default value config?
+
+
     loop_on = True
     while loop_on == True:
         try:
@@ -370,10 +373,13 @@ try:
                     print config.qpid_format % Formatter(msg)
                     print '\n '
                     display_all_message_contents(msg)
-                print '\n Persist system event...'
-                persist_system_event(msg, url, ooi_timeout, ooi_timeout_read)
-                print ' Performing session.acknowledge()'
-                session.acknowledge()
+
+                bresult = persist_system_event(msg, url, ooi_timeout, ooi_timeout_read)
+                if bresult:
+                    print '\n Persisted system event...'
+                    print ' Performing session.acknowledge()'
+                    session.acknowledge()
+
         except Empty:
             pass
         except Exception as err:
