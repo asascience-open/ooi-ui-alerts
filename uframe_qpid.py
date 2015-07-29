@@ -10,12 +10,10 @@ from qpid.log import enable, DEBUG, WARN
 import os
 from os.path import exists
 import yaml
-import datetime as dt
 import time
 import requests
 import json
-from dateutil.parser import parse as parse_date
-import pytz
+from base64 import b64encode
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # class Configuration
@@ -151,6 +149,14 @@ def display_all_message_contents(message):
     print '\n ------ message.content: ', message.content
     return
 
+def get_api_headers(username, password):
+        return {
+            'Authorization': 'Basic ' + b64encode(
+                (username + ':' + password).encode('utf-8')).decode('utf-8'),
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+
 def persist_system_event(message, url, timeout, timeout_read):
     """
     Process uframe message and persist as SystemEvent
@@ -227,7 +233,7 @@ def persist_system_event(message, url, timeout, timeout_read):
           "uframe_filter_id": 2
         }
     """
-    debug = False
+    debug = True
     success = True
 
     # Get values from message for data dictionary
@@ -238,13 +244,13 @@ def persist_system_event(message, url, timeout, timeout_read):
     attributes = content['attributes']
     if 'eventId' not in attributes:
         uframe_event_id = -1                        # processing an alert
-        uframe_filter_id = 1
+        uframe_filter_id = 1                        # todo Change when available
     else:
         uframe_event_id = attributes['eventId']     # processing an alarm
         if 'filterId' in attributes:
-            uframe_filter_id = attributes['filterId']                  #todo Change when available
+            uframe_filter_id = attributes['filterId']
         else:
-            uframe_filter_id = 2
+            uframe_filter_id = 2                    # todo Change when available
 
     severity = attributes['severity']
     method = attributes['method']
@@ -269,7 +275,8 @@ def persist_system_event(message, url, timeout, timeout_read):
     if debug: print '\n event_data: ', event_data
     try:
         # Send request to ooi-ui-services to persist SystemEvent
-        response = requests.post(url, timeout=(timeout, timeout_read),  data=new_event) # headers=headers,
+        headers = get_api_headers('admin', 'password')
+        response = requests.post(url, timeout=(timeout, timeout_read),  data=new_event, headers=headers)
         if response.status_code != 201:
             success = False
             message = 'Error: (%d) ' % (response.status_code)
