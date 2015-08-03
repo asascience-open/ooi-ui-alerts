@@ -233,7 +233,7 @@ def persist_system_event(message, url, timeout, timeout_read):
           "uframe_filter_id": 2
         }
     """
-    debug = True
+    debug = False
     success = True
 
     # Get values from message for data dictionary
@@ -370,10 +370,10 @@ try:
     if qpid_fetch_interval < 1:         # config?
         qpid_fetch_interval = 3         # default value config?
 
-
     loop_on = True
     while loop_on == True:
         try:
+            print '\n fetch...'
             msg = receiver.fetch(timeout=config.qpid_timeout)
             if msg is not None:
                 if debug:
