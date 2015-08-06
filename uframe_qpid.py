@@ -157,7 +157,7 @@ def get_api_headers(username, password):
             'Content-Type': 'application/json'
         }
 
-def persist_system_event(message, url, timeout, timeout_read):
+def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST):
     """
     Process uframe message and persist as SystemEvent
 
@@ -243,14 +243,19 @@ def persist_system_event(message, url, timeout, timeout_read):
     # todo verify required content is available
     attributes = content['attributes']
     if 'eventId' not in attributes:
-        uframe_event_id = -1                        # processing an alert
-        uframe_filter_id = 1                        # todo Change when available
-    else:
-        uframe_event_id = attributes['eventId']     # processing an alarm
+        # processing an alert
+        uframe_event_id = -1
         if 'filterId' in attributes:
             uframe_filter_id = attributes['filterId']
         else:
-            uframe_filter_id = 2                    # todo Change when available
+            uframe_filter_id = 1                    # todo - for uframe-test, remove
+    else:
+        # processing an alarm
+        uframe_event_id = attributes['eventId']
+        if 'filterId' in attributes:
+            uframe_filter_id = attributes['filterId']
+        else:
+            uframe_filter_id = 2                    # todo - for uframe-test, remove
 
     severity = attributes['severity']
     method = attributes['method']
@@ -306,10 +311,19 @@ try:
     config = Configuration()
 
     # Display configuration variables
-    #config.settings()
+    config.settings()
+
+    # development only
+    USING_UFRAME_TEST = False
+    if 'uframe-test' in config.qpid_broker:
+        print '\nDevelopment - Running against uframe-test\n'
+        USING_UFRAME_TEST = True
+    else:
+        print '\nDevelopment - Running against uframe-dev\n'
+
 
     # verify ooi-ui-services are available - if not, abort
-    # todo consider security/auth access for 12577
+    # todo consider security/auth access
     #headers = get_api_headers('admin', 'test')
     base_url = 'http://' + config.host + ':' + str(config.port)
     test_url = "/".join([ base_url, 'alert_alarm_definition'])
@@ -381,7 +395,7 @@ try:
                     print '\n '
                     display_all_message_contents(msg)
 
-                bresult = persist_system_event(msg, url, ooi_timeout, ooi_timeout_read)
+                bresult = persist_system_event(msg, url, ooi_timeout, ooi_timeout_read, USING_UFRAME_TEST)
                 if bresult:
                     print '\n Persisted system event...'
                     print ' Performing session.acknowledge()'

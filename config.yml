@@ -45,7 +45,7 @@ COMMON: &common
     UFRAME_QPID_FORMAT: "%(M)s"
     UFRAME_QPID_FETCH_INTERVAL: 1
     OOI_TIMEOUT: 5
-    OOI_TIMEOUT_READ: 3
+    OOI_TIMEOUT_READ: 20
 
 DEVELOPMENT: &development
     <<: *common
