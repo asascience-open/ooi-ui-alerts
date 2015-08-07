@@ -60,3 +60,6 @@ target/
 
 # PyCharm Project
 .idea/
+
+# Project-Specific
+*_local.yml
