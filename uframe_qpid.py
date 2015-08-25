@@ -37,6 +37,9 @@ class Configuration:
     qpid_address = None
     ooi_timeout = None
     ooi_timeout_read = None
+    oo_ui_api_key = None
+    services_qpid_user = None
+    services_qpid_password = None
 
     def __init__(self):
 
@@ -69,10 +72,14 @@ class Configuration:
         self.qpid_reconnect_limit = settings[root]['UFRAME_QPID_RECONNECT_LIMIT']
         self.qpid_verbose = settings[root]['UFRAME_QPID_VERBOSE']
         self.qpid_fetch_interval = settings[root]['UFRAME_QPID_FETCH_INTERVAL']
+
         self.host = settings[root]['HOST']
         self.port = settings[root]['PORT']
         self.ooi_timeout = settings[root]['OOI_TIMEOUT']
         self.ooi_timeout_read = settings[root]['OOI_TIMEOUT_READ']
+        self.ooi_ui_api_key = settings[root]['UI_API_KEY']
+        self.services_qpid_user = settings[root]['SERVICES_QPID_USER']
+        self.services_qpid_password = settings[root]['SERVICES_QPID_PASSWORD']
 
         if not self.qpid_broker or self.qpid_broker is None:
             message = 'Configuration value for UFRAME_QPID_BROKER is empty or None.'
@@ -117,6 +124,9 @@ class Configuration:
         print '\n port: ', self.port
         print '\n ooi_timeout: ', self.ooi_timeout
         print '\n ooi_timeout_read: ', self.ooi_timeout_read
+        print '\n ooi-ui-api_key: ', self.ooi_ui_api_key
+        print '\n services_qpid_user: ', self.services_qpid_user
+        print '\n services_qpid_password: ', self.services_qpid_password
         print '\n '
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -157,7 +167,7 @@ def get_api_headers(username, password):
             'Content-Type': 'application/json'
         }
 
-def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST):
+def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST, services_qpid_user, services_qpid_password):
     """
     Process uframe message and persist as SystemEvent
 
@@ -240,22 +250,17 @@ def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST)
     content = json.loads(str(message.content))
     if debug: print '\n message.content: ', content
 
-    # todo verify required content is available
     attributes = content['attributes']
     if 'eventId' not in attributes:
         # processing an alert
         uframe_event_id = -1
         if 'filterId' in attributes:
             uframe_filter_id = attributes['filterId']
-        else:
-            uframe_filter_id = 1                    # todo - for uframe-test, remove
     else:
         # processing an alarm
         uframe_event_id = attributes['eventId']
         if 'filterId' in attributes:
             uframe_filter_id = attributes['filterId']
-        else:
-            uframe_filter_id = 2                    # todo - for uframe-test, remove
 
     severity = attributes['severity']
     method = attributes['method']
@@ -280,7 +285,9 @@ def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST)
     if debug: print '\n event_data: ', event_data
     try:
         # Send request to ooi-ui-services to persist SystemEvent
-        headers = get_api_headers('admin', 'password')
+        headers = get_api_headers(services_qpid_user, services_qpid_password)
+        #api_key = config.ooi
+        #headers={'X-Csrf-Token' : api_key}
         response = requests.post(url, timeout=(timeout, timeout_read),  data=new_event, headers=headers)
         if response.status_code != 201:
             success = False
@@ -302,122 +309,129 @@ def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Long running service
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-conn = None
-try:
-    debug = False
-    print '\n Starting...'
-
-    # Read configuration file for settings
-    config = Configuration()
-
-    # Display configuration variables
-    config.settings()
-
-    # development only
-    USING_UFRAME_TEST = False
-    if 'uframe-test' in config.qpid_broker:
-        print '\nDevelopment - Running against uframe-test\n'
-        USING_UFRAME_TEST = True
-    else:
-        print '\nDevelopment - Running against uframe-dev\n'
-
-
-    # verify ooi-ui-services are available - if not, abort
-    # todo consider security/auth access
-    #headers = get_api_headers('admin', 'test')
-    base_url = 'http://' + config.host + ':' + str(config.port)
-    test_url = "/".join([ base_url, 'alert_alarm_definition'])
-    ooi_timeout = config.ooi_timeout
-    ooi_timeout_read = config.ooi_timeout_read
+def main():
+    conn = None
     try:
-        response = requests.get(test_url, timeout=(ooi_timeout, ooi_timeout_read))
-        if response.status_code != 200:
-            message = 'Unable to connect to ooi-ui-services, aborting. status code: %s' % str(response.status_code)
+        debug = False
+        print '\n Starting...'
+
+        # Read configuration file for settings
+        config = Configuration()
+
+        # Display configuration variables
+        config.settings()
+
+        # development only
+        USING_UFRAME_TEST = False
+        if 'uframe-test' in config.qpid_broker:
+            print '\nDevelopment - Running against uframe-test\n'
+            USING_UFRAME_TEST = True
+        else:
+            print '\nDevelopment - Running against uframe-dev\n'
+
+
+        # verify ooi-ui-services are available - if not, abort
+        # todo consider security/auth access
+        #headers = get_api_headers('admin', 'test')
+        base_url = 'http://' + config.host + ':' + str(config.port)
+        test_url = "/".join([ base_url, 'alert_alarm_definition'])
+        ooi_timeout = config.ooi_timeout
+        ooi_timeout_read = config.ooi_timeout_read
+        try:
+            response = requests.get(test_url, timeout=(ooi_timeout, ooi_timeout_read))
+            if response.status_code != 200:
+                message = 'Unable to connect to ooi-ui-services, aborting. status code: %s' % str(response.status_code)
+                print '\n message: ', message
+                raise Exception(message)
+
+            response_data = json.loads(response.content)
+            if 'alert_alarm_definition' not in response_data:
+                message = 'Malformed response content from ooi-ui-services.'
+                raise Exception(message)
+            if not response_data['alert_alarm_definition'] or response_data['alert_alarm_definition'] is None:
+                message = 'Failed to retrieve any alert_alarm_definition(s) from ooi-ui-services.'
+                raise Exception(message)
+
+        except Exception as err:
+            message = 'Verify configuration and availability of ooi-ui-services, aborting. Error: %s' % str(err.message)
+            raise Exception(message)
+
+        # Enable qpid DEBUG or WARN
+        if config.qpid_verbose:
+            enable("qpid", DEBUG)
+        else:
+            enable("qpid", WARN)
+
+        timeout = config.qpid_timeout
+
+        # Configure connection string for broker; connect to broker and start session
+        conn_string = config.qpid_broker
+        if config.qpid_username:
+            conn_string = '{0}/{1}@{2}:{3}'.format(config.qpid_username, config.qpid_password,
+                                                   config.qpid_broker, config.qpid_broker_port)
+        else:
+            conn_string = '{0}:{1}'.format(config.qpid_broker, 5672)
+        try:
+            conn = Connection(conn_string, reconnect=config.qpid_reconnect,
+                                           reconnect_interval=config.qpid_reconnect_interval,
+                                           reconnect_limit=config.qpid_reconnect_limit,
+                                           reconnect_timeout=config.qpid_reconnect_timeout)
+        except Exception, err:
+            message = 'Failed to connect to qpid broker. Error: %s', err.message
             print '\n message: ', message
             raise Exception(message)
 
-        response_data = json.loads(response.content)
-        if 'alert_alarm_definition' not in response_data:
-            message = 'Malformed response content from ooi-ui-services.'
-            raise Exception(message)
-        if not response_data['alert_alarm_definition'] or response_data['alert_alarm_definition'] is None:
-            message = 'Failed to retrieve any alert_alarm_definition(s) from ooi-ui-services.'
-            raise Exception(message)
 
+        # Configure connection and session receiver. Process available messages one at a time,
+        # sending an acknowledge after each.
+        conn.open()
+        session = conn.session()
+        receiver = session.receiver(config.qpid_address)
+        url = "/".join([base_url, "alert_alarm"])
+        qpid_fetch_interval = config.qpid_fetch_interval
+        if qpid_fetch_interval < 1:         # config?
+            qpid_fetch_interval = 3         # default value config?
+
+        loop_on = True
+        while loop_on == True:
+            try:
+                print '\n fetch...'
+                msg = receiver.fetch(timeout=config.qpid_timeout)
+                if msg is not None:
+                    if debug:
+                        print config.qpid_format % Formatter(msg)
+                        print '\n '
+                        display_all_message_contents(msg)
+
+                    bresult = persist_system_event(msg, url, ooi_timeout, ooi_timeout_read, USING_UFRAME_TEST,
+                                                   config.services_qpid_user, config.services_qpid_password)
+                    if bresult:
+                        print '\n Persisted system event...'
+                        print ' Performing session.acknowledge()'
+                        session.acknowledge()
+
+            except Empty:
+                pass
+            except Exception as err:
+                print "\n Exception: ", err.message
+
+            time.sleep(qpid_fetch_interval)
+
+    except ReceiverError, e:
+        print 'ReceiverError: ', e
+    except KeyboardInterrupt:
+        pass
     except Exception as err:
-        message = 'Verify configuration and availability of ooi-ui-services, aborting. Error: %s' % str(err.message)
-        raise Exception(message)
+        message = 'General exception: ', err.message
+        print '\n\n %s \n\n' % str(err.message)
+        pass
 
-    # Enable qpid DEBUG or WARN
-    if config.qpid_verbose:
-        enable("qpid", DEBUG)
-    else:
-        enable("qpid", WARN)
+    finally:
+        if conn:
+            conn.close()
 
-    timeout = config.qpid_timeout
-
-    # Configure connection string for broker; connect to broker and start session
-    conn_string = config.qpid_broker
-    if config.qpid_username:
-        conn_string = '{0}/{1}@{2}:{3}'.format(config.qpid_username, config.qpid_password,
-                                               config.qpid_broker, config.qpid_broker_port)
-    else:
-        conn_string = '{0}:{1}'.format(config.qpid_broker, 5672)
+if __name__ == "__main__":
     try:
-        conn = Connection(conn_string, reconnect=config.qpid_reconnect,
-                                       reconnect_interval=config.qpid_reconnect_interval,
-                                       reconnect_limit=config.qpid_reconnect_limit,
-                                       reconnect_timeout=config.qpid_reconnect_timeout)
-    except Exception, err:
-        message = 'Failed to connect to qpid broker. Error: %s', err.message
-        print '\n message: ', message
-        raise Exception(message)
-
-
-    # Configure connection and session receiver. Process available messages one at a time,
-    # sending an acknowledge after each.
-    conn.open()
-    session = conn.session()
-    receiver = session.receiver(config.qpid_address)
-    url = "/".join([base_url, "alert_alarm"])
-    qpid_fetch_interval = config.qpid_fetch_interval
-    if qpid_fetch_interval < 1:         # config?
-        qpid_fetch_interval = 3         # default value config?
-
-    loop_on = True
-    while loop_on == True:
-        try:
-            print '\n fetch...'
-            msg = receiver.fetch(timeout=config.qpid_timeout)
-            if msg is not None:
-                if debug:
-                    print config.qpid_format % Formatter(msg)
-                    print '\n '
-                    display_all_message_contents(msg)
-
-                bresult = persist_system_event(msg, url, ooi_timeout, ooi_timeout_read, USING_UFRAME_TEST)
-                if bresult:
-                    print '\n Persisted system event...'
-                    print ' Performing session.acknowledge()'
-                    session.acknowledge()
-
-        except Empty:
-            pass
-        except Exception as err:
-            print "\n Exception: ", err.message
-
-        time.sleep(qpid_fetch_interval)
-
-except ReceiverError, e:
-    print 'ReceiverError: ', e
-except KeyboardInterrupt:
-    pass
-except Exception as err:
-    message = 'General exception: ', err.message
-    print '\n\n %s \n\n' % str(err.message)
-    pass
-
-finally:
-    if conn:
-        conn.close()
-
+        main()
+    except Exception as err:
+        print '\n exception: ', err.message

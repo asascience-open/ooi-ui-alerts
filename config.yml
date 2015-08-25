@@ -46,6 +46,8 @@ COMMON: &common
     UFRAME_QPID_FETCH_INTERVAL: 1
     OOI_TIMEOUT: 5
     OOI_TIMEOUT_READ: 20
+    SERVICES_QPID_USER: admin
+    SERVICES_QPID_PASSWORD: password
 
 DEVELOPMENT: &development
     <<: *common
