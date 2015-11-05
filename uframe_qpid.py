@@ -238,6 +238,11 @@ def persist_system_event(message, url, timeout, timeout_read, USING_UFRAME_TEST)
 
     # Get values from message for data dictionary
     content = json.loads(str(message.content))
+
+    # Check to make sure this is an alert/alarm message with attributes
+    if 'attributes' not in content:
+        return success
+
     if debug: print '\n message.content: ', content
 
     # todo verify required content is available
