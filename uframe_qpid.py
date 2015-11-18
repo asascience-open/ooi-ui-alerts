@@ -349,13 +349,13 @@ def main():
                 print '\n message: ', message
                 raise Exception(message)
 
-            response_data = json.loads(response.content)
-            if 'alert_alarm_definition' not in response_data:
-                message = 'Malformed response content from ooi-ui-services.'
-                raise Exception(message)
-            if not response_data['alert_alarm_definition'] or response_data['alert_alarm_definition'] is None:
-                message = 'Failed to retrieve any alert_alarm_definition(s) from ooi-ui-services.'
-                raise Exception(message)
+            # response_data = json.loads(response.content)
+            # if 'alert_alarm_definition' not in response_data:
+            #     message = 'Malformed response content from ooi-ui-services.'
+            #     raise Exception(message)
+            # if not response_data['alert_alarm_definition'] or response_data['alert_alarm_definition'] is None:
+            #     message = 'Failed to retrieve any alert_alarm_definition(s) from ooi-ui-services.'
+            #     raise Exception(message)
 
         except Exception as err:
             message = 'Verify configuration and availability of ooi-ui-services, aborting. Error: %s' % str(err.message)
